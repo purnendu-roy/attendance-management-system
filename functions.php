@@ -33,7 +33,7 @@ function initialize_holid($holid, $from, $till, $con)
 }
 
 
-function print_chart($chart, $from, $till, $type, $holid) 
+function print_chart($chart, $from, $till, $type, $holid,$comp_name,$comp_roll) 
 {   
     $present_days = 0;
     $absent_days = 0;
@@ -42,9 +42,12 @@ function print_chart($chart, $from, $till, $type, $holid)
     $end_date = $till;
     $dt = new DateTime($date);
     $d = $dt->format('Y-m-d'); //date		
-
-    echo "<TABLE borderColor=#000000 cellSpacing=0 cellPadding=6 border=2>\n";
-    echo "<th>DATE</th><th>DAY</th><th>START TIME</th><th>END TIME</th><th>TYPE</th><th>ENTRY</th><th>STATUS</th>";
+	
+	if($type!="Prcnt")
+	{
+    	echo "<TABLE borderColor=#000000 cellSpacing=0 cellPadding=6 border=2>\n";
+    	echo "<th>DATE</th><th>DAY</th><th>START TIME</th><th>END TIME</th><th>TYPE</th><th>ENTRY</th><th>STATUS</th>"; 
+	}
 
     while (strtotime($date) <= strtotime($end_date)) 
     {
@@ -73,9 +76,11 @@ function print_chart($chart, $from, $till, $type, $holid)
                 
             }
         } 
-        else if ($chart[$d][7] == $type || $type == "Complete") 
+        else if ($chart[$d][7] == $type || $type == "Complete" || $type=="Prcnt") 
         {
             
+			if($type!=="Prcnt")
+			{
             echo "<tr>";
             echo
             "<td>" . $chart[$d][1] . " </td>" .
@@ -86,13 +91,16 @@ function print_chart($chart, $from, $till, $type, $holid)
             "<td>" . $chart[$d][6] . " </td>" .
             "<td>" . $chart[$d][7] . " </td>";
             echo "</tr>";
-
-            if ($chart[$d][7] == "Absent")
+			}
+		if( $type == "Complete" ||  $type == "Prcnt" || $chart[$d][7] == $type)
+			{
+				 if ($chart[$d][7] == "Absent")
                 $absent_days++;
-            if ($chart[$d][7] == "Present")
+	            if ($chart[$d][7] == "Present")
                 $present_days++;
-        }
-
+				
+			}
+		}
         if ($chart[$d][0] == 2) 
         {
             //if two classes in a day
@@ -114,11 +122,16 @@ function print_chart($chart, $from, $till, $type, $holid)
                     "<td>" . $chart[$d][9][7] . "</td> ";
                     echo "</tr>";
 
-                    if ($chart[$d][9][7] == "Absent")
+                    
+                }
+				if( $type == "Complete" ||  $type == "Prcnt" || $chart[$d][9][7] == $type)
+				{
+				 if ($chart[$d][9][7] == "Absent")
                          $absent_days++;
                     if ($chart[$d][9][7] == "Present")
                         $present_days++;
-                }
+					
+				}
             }
             
             else if ($holid[$d]==1 )
@@ -158,30 +171,46 @@ function print_chart($chart, $from, $till, $type, $holid)
                 "<td>" . $chart[$d][10][5] . "</td> " .
                 "<td>" . $chart[$d][10][6] . "</td> ";
                 echo "</tr>";
-
-                if ($chart[$d][10][6] == "Absent")
+            }
+			if( $type == "Complete" ||  $type == "Prcnt" || $chart[$d][10][6] == $type )
+			{
+				 if ($chart[$d][10][6] == "Absent")
                     $absent_days++;
                 if ($chart[$d][10][6] == "Present")
                     $present_days++;
-            }
+				
+					
+			}
         }
 
         //date increment
         $date = date("Y-m-d", strtotime("+1 day", strtotime($date)));
     }
-    
-    echo "</TABLE></HTML>";
-    echo "<br>";
-    echo "<br>";
+    if($type!="Prcnt")
+	{
+    	echo "</TABLE></HTML>";
+    	echo "<br>";
+    	echo "<br>";
+	}
     
     if ($type == "Present" || $type == "Complete")
+	{
         echo "# Present classes =   " . $present_days;
-    echo "<br>";
-    echo "<br>";
+    	echo "<br>";
+    	echo "<br>";
+	}
     if ($type == "Absent" || $type == "Complete")
         echo "# Absent classes  =   " . $absent_days;
-    echo "<br><br>  -   -   -   -   -   -   -   -   -   -<br><br>";
+	if($type!="Prcnt")
+	    echo "<br><br>  -   -   -   -   -   -   -   -   -   -<br><br>";
+	else
+	{
+		$p=(($present_days)/($present_days+$absent_days))*100;
+		if($_SESSION['percent']>$p)
+		$_SESSION['tab1'].="<tr><td>".$comp_roll."</td><td>".$comp_name."</td><td>".$p."</td></tr>";
+	}
 }
+
 
 
 function initialize_chart($chart, $chart1, $schedule, $from, $till, $con , $c_id) 
@@ -304,7 +333,7 @@ function get_schedule($schedule , $c_id , $con)
     return $schedule;
 }
 
-function report($con, $rollno, $c_id, $from, $till, $type ,$schedule , $holid , $chart) {
+function report($con, $rollno,$comp_name,$c_id, $from, $till, $type ,$schedule , $holid , $chart) {
 
         /*
         //intialize holiday array
@@ -323,6 +352,8 @@ function report($con, $rollno, $c_id, $from, $till, $type ,$schedule , $holid , 
         */
     
         //timestamp of student in then given interval (independent of all courses)
+		$comp_roll=$rollno;
+		
         $query2 =   "
                     SELECT timestamp 
                     FROM attendance 
@@ -525,8 +556,7 @@ function report($con, $rollno, $c_id, $from, $till, $type ,$schedule , $holid , 
             
             $date = date("Y-m-d", strtotime("+1 day", strtotime($date)));
         }//while loop ends
-        
-        print_chart($chart, $from, $till, $type, $holid);
+          	print_chart($chart, $from, $till, $type, $holid,$comp_name,$comp_roll);
     }//present day ends
 
 function class_details($con, $c_id, $from, $till) {
